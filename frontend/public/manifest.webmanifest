@@ -1,0 +1,42 @@
+{
+  "name": "Parser Lab — The Ultimate Parser App",
+  "short_name": "Parser Lab",
+  "description": "Explorador interactivo de los 6 algoritmos clásicos de análisis sintáctico: LL(1), Descenso Recursivo, LR(0), SLR(1), LR(1) y LALR(1). Con autómatas, árboles de derivación, AST, asistente de errores y recomendaciones inteligentes.",
+  "start_url": "/ll1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "categories": ["education", "developer", "utilities"],
+  "lang": "es",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "LL(1)",
+      "short_name": "LL(1)",
+      "description": "Parser predictivo descendente",
+      "url": "/ll1"
+    },
+    {
+      "name": "LR(1)",
+      "short_name": "LR(1)",
+      "description": "Parser ascendente canónico",
+      "url": "/lr1"
+    },
+    {
+      "name": "LALR(1)",
+      "short_name": "LALR(1)",
+      "description": "Parser usado en lenguajes reales",
+      "url": "/lalr1"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: dark rounded square -->
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+
+  <!-- Parse tree: 3 levels -->
+  <!-- Root (top) -->
+  <circle cx="256" cy="120" r="34" fill="#3b82f6" stroke="#dbeafe" stroke-width="6"/>
+
+  <!-- Level 2: two children -->
+  <circle cx="168" cy="256" r="30" fill="#3b82f6" stroke="#dbeafe" stroke-width="5"/>
+  <circle cx="344" cy="256" r="30" fill="#3b82f6" stroke="#dbeafe" stroke-width="5"/>
+
+  <!-- Level 3: leaves (operator + operands) -->
+  <rect x="108" y="368" width="56" height="56" rx="12" fill="#f59e0b" stroke="#fef3c7" stroke-width="5"/>
+  <rect x="228" y="368" width="56" height="56" rx="28" fill="#10b981" stroke="#d1fae5" stroke-width="5"/>
+  <rect x="348" y="368" width="56" height="56" rx="12" fill="#f59e0b" stroke="#fef3c7" stroke-width="5"/>
+
+  <!-- Edges -->
+  <g stroke="#64748b" stroke-width="5" fill="none">
+    <!-- root → level 2 -->
+    <line x1="256" y1="154" x2="168" y2="226"/>
+    <line x1="256" y1="154" x2="344" y2="226"/>
+    <!-- level 2 → level 3 -->
+    <line x1="168" y1="286" x2="136" y2="368"/>
+    <line x1="168" y1="286" x2="256" y2="368"/>
+    <line x1="344" y1="286" x2="376" y2="368"/>
+  </g>
+</svg>
