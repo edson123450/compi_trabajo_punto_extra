@@ -16,8 +16,18 @@ import { SmartRecommendations } from './SmartRecommendations'
 import { HistoryExport }        from './HistoryExport'
 import { AutomataViewer }       from './AutomataViewer'
 import { ComparativePanel }     from './ComparativePanel'
+import { DerivationTreeViewer } from './DerivationTreeViewer'
 import type { ParseResult }     from '@/lib/types'
 import type { GrammarExample }  from '@/lib/grammarZoo'
+
+const TREE_API: Record<string, (g: string, t: string[]) => Promise<any>> = {
+  ll1:   api.ll1Tree,
+  rd:    api.rdTree,
+  lr0:   api.lr0Tree,
+  slr1:  api.slr1Tree,
+  lr1:   api.lr1Tree,
+  lalr1: api.lalr1Tree,
+}
 
 const LR_TABLE_API: Record<string, (g: string) => Promise<any>> = {
   lr0: api.lr0Table, slr1: api.slr1Table, lr1: api.lr1Table, lalr1: api.lalr1Table,
@@ -73,17 +83,24 @@ export function ParserDashboard({ parserKey }: { parserKey: string }) {
       let res: ParseResult = {}
       let accepted: boolean | null = null
 
+      const treeApi = TREE_API[parserKey]
+
       if (parserKey === 'll1') {
-        const [gi, ff, tbl, sim] = await Promise.all([
+        const [gi, ff, tbl, sim, tree] = await Promise.all([
           api.grammarInfo(grammar), api.firstFollow(grammar),
           api.ll1Table(grammar),
           tokens.length ? api.ll1Simulate(grammar, tokens) : Promise.resolve(null),
+          tokens.length ? treeApi(grammar, tokens) : Promise.resolve(null),
         ])
         if (!gi.ok)  throw new Error(gi.error)
         if (!ff.ok)  throw new Error(ff.error)
         if (!tbl.ok) throw new Error(tbl.error)
         if (sim && !sim.ok) throw new Error(sim.error)
-        res = { grammarInfo: gi, firstFollow: ff, ll1Table: tbl, ll1Simulate: sim ?? undefined }
+        res = {
+          grammarInfo: gi, firstFollow: ff,
+          ll1Table: tbl, ll1Simulate: sim ?? undefined,
+          derivationTree: tree?.ok ? tree : undefined,
+        }
         accepted = sim?.accepted ?? null
 
       } else if (parserKey === 'rd') {
@@ -91,18 +108,26 @@ export function ParserDashboard({ parserKey }: { parserKey: string }) {
           setError('Ingresa una cadena de prueba para ejecutar el Descenso Recursivo.')
           setLoading(false); return
         }
-        const sim = await api.rdSimulate(grammar, tokens)
+        const [sim, tree] = await Promise.all([
+          api.rdSimulate(grammar, tokens),
+          treeApi(grammar, tokens),
+        ])
         if (!sim.ok) throw new Error(sim.error)
-        res = { textSimulate: sim }; accepted = sim.accepted
+        res = {
+          textSimulate: sim,
+          derivationTree: tree?.ok ? tree : undefined,
+        }
+        accepted = sim.accepted
 
       } else {
         const dotApi   = LR_DOT_API[parserKey]
         const tableApi = LR_TABLE_API[parserKey]
         const simApi   = LR_SIM_API[parserKey]
-        const [dot, tbl, sim] = await Promise.all([
+        const [dot, tbl, sim, tree] = await Promise.all([
           dotApi(grammar),
           tableApi(grammar),
           tokens.length ? simApi(grammar, tokens) : Promise.resolve(null),
+          tokens.length ? treeApi(grammar, tokens) : Promise.resolve(null),
         ])
         if (!tbl.ok) throw new Error(tbl.error)
         if (sim && !sim.ok) throw new Error(sim.error)
@@ -110,6 +135,7 @@ export function ParserDashboard({ parserKey }: { parserKey: string }) {
           lrTable: tbl,
           textSimulate: sim ?? undefined,
           automatonDot: dot?.ok ? dot.dot : undefined,
+          derivationTree: tree?.ok ? tree : undefined,
         }
         accepted = sim?.accepted ?? null
       }
@@ -259,6 +285,16 @@ export function ParserDashboard({ parserKey }: { parserKey: string }) {
                 output={result.textSimulate.output}
                 accepted={result.textSimulate.accepted}
                 title={parserKey === 'rd' ? 'Traza — Descenso Recursivo' : `Traza — ${config.label}`}
+              />
+            )}
+
+            {/* Derivation tree (LL / RD / LR family) */}
+            {result.derivationTree && (
+              <DerivationTreeViewer
+                tree={result.derivationTree.tree}
+                accepted={result.derivationTree.accepted}
+                error={result.derivationTree.error}
+                title={`Árbol de derivación · ${config.label}`}
               />
             )}
           </div>

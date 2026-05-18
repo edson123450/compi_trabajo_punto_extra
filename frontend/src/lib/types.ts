@@ -73,6 +73,22 @@ export interface DotData {
   n_states: number
 }
 
+export interface DerivationNodeData {
+  name: string
+  attributes?: {
+    type?: 'nonterminal' | 'terminal' | 'epsilon'
+    production?: string
+  }
+  children?: DerivationNodeData[]
+}
+
+export interface TreeData {
+  ok: true
+  tree: DerivationNodeData | null
+  accepted: boolean
+  error?: string
+}
+
 export interface ParseResult {
   grammarInfo?: GrammarInfoData
   firstFollow?: FirstFollowData
@@ -81,4 +97,5 @@ export interface ParseResult {
   lrTable?: LRTableData
   textSimulate?: TextSimulateData
   automatonDot?: string
+  derivationTree?: TreeData
 }

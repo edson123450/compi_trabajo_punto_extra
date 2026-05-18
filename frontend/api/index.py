@@ -30,6 +30,7 @@ from api.lr0_parser import build_lr0_tables
 from api.slr1_parser import build_slr1_tables
 from api.lr1_parser import build_lr1_tables
 from api.lalr1_parser import build_lalr1_tables
+from api.derivation_trees import build_topdown_tree, build_lr_tree
 
 # ── app setup ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -330,6 +331,82 @@ def lalr1_simulate():
     output = _capture(simulate_lr, action, goto, tokens, "LALR(1)")
     accepted = "ACCEPT" in output
     return _ok(accepted=accepted, output=output, conflicts=conflicts)
+
+
+# ── Derivation Trees ──────────────────────────────────────────────────────────
+
+@app.route("/api/ll1/tree", methods=["POST"])
+def ll1_tree():
+    g, tokens, err = _parse_body()
+    if err:
+        return err
+    if not tokens:
+        return _err("Missing 'tokens' field")
+    table, _ = build_ll1_table(g)
+    tree, accepted, error_msg = build_topdown_tree(g, table, tokens)
+    return _ok(tree=tree, accepted=accepted, error=error_msg)
+
+
+@app.route("/api/rd/tree", methods=["POST"])
+def rd_tree():
+    # Recursive descent uses the same LL(1) table, so the resulting tree
+    # is identical to LL(1)'s. Endpoint kept separate for API clarity.
+    g, tokens, err = _parse_body()
+    if err:
+        return err
+    if not tokens:
+        return _err("Missing 'tokens' field")
+    table, _ = build_ll1_table(g)
+    tree, accepted, error_msg = build_topdown_tree(g, table, tokens)
+    return _ok(tree=tree, accepted=accepted, error=error_msg)
+
+
+@app.route("/api/lr0/tree", methods=["POST"])
+def lr0_tree():
+    g, tokens, err = _parse_body()
+    if err:
+        return err
+    if not tokens:
+        return _err("Missing 'tokens' field")
+    action, goto, _ = build_lr0_tables(g)
+    tree, accepted, error_msg = build_lr_tree(action, goto, tokens)
+    return _ok(tree=tree, accepted=accepted, error=error_msg)
+
+
+@app.route("/api/slr1/tree", methods=["POST"])
+def slr1_tree():
+    g, tokens, err = _parse_body()
+    if err:
+        return err
+    if not tokens:
+        return _err("Missing 'tokens' field")
+    action, goto, _ = build_slr1_tables(g)
+    tree, accepted, error_msg = build_lr_tree(action, goto, tokens)
+    return _ok(tree=tree, accepted=accepted, error=error_msg)
+
+
+@app.route("/api/lr1/tree", methods=["POST"])
+def lr1_tree():
+    g, tokens, err = _parse_body()
+    if err:
+        return err
+    if not tokens:
+        return _err("Missing 'tokens' field")
+    action, goto, _ = build_lr1_tables(g)
+    tree, accepted, error_msg = build_lr_tree(action, goto, tokens)
+    return _ok(tree=tree, accepted=accepted, error=error_msg)
+
+
+@app.route("/api/lalr1/tree", methods=["POST"])
+def lalr1_tree():
+    g, tokens, err = _parse_body()
+    if err:
+        return err
+    if not tokens:
+        return _err("Missing 'tokens' field")
+    action, goto, _ = build_lalr1_tables(g)
+    tree, accepted, error_msg = build_lr_tree(action, goto, tokens)
+    return _ok(tree=tree, accepted=accepted, error=error_msg)
 
 
 # ── DOT / Automaton visualization ─────────────────────────────────────────────

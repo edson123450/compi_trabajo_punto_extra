@@ -61,3 +61,13 @@ body {
 .lab-card {
   @apply rounded-2xl border border-neutral-200 bg-white shadow-sm;
 }
+
+/* ── react-d3-tree polish ── */
+.derivation-tree-link {
+  stroke: #94a3b8;
+  stroke-width: 1.4;
+  fill: none;
+}
+.rd3t-tree-container svg {
+  background: transparent;
+}
