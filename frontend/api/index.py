@@ -418,6 +418,39 @@ def lalr1_tree():
 
 # ── AI assistant (OpenAI) ─────────────────────────────────────────────────────
 
+@app.route("/api/ai/health", methods=["GET"])
+def ai_health():
+    """Diagnostic endpoint — reports backend AI configuration WITHOUT
+    exposing secrets. The full API key is never returned, only its
+    length and the public prefix (which is also visible in OpenAI's UI).
+    """
+    api_key = os.environ.get('OPENAI_API_KEY', '')
+    key_present = bool(api_key.strip())
+    key_length  = len(api_key.strip()) if key_present else 0
+    key_prefix  = api_key.strip()[:7] if key_present else ''
+
+    try:
+        import openai
+        openai_installed = True
+        openai_version = getattr(openai, '__version__', 'unknown')
+        openai_import_error = None
+    except ImportError as exc:
+        openai_installed = False
+        openai_version = None
+        openai_import_error = str(exc)
+
+    return _ok(
+        openai_library_installed=openai_installed,
+        openai_library_version=openai_version,
+        openai_import_error=openai_import_error,
+        openai_api_key_configured=key_present,
+        openai_api_key_length=key_length,
+        openai_api_key_prefix_safe=key_prefix,
+        configured_model=os.environ.get('OPENAI_MODEL', 'gpt-4o-mini'),
+        python_version=sys.version.split()[0],
+    )
+
+
 @app.route("/api/ai/explain-error", methods=["POST"])
 def ai_explain_error_endpoint():
     """Natural-language explanation of a parser error, via OpenAI."""
