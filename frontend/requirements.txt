@@ -1,3 +1,7 @@
 Flask==3.0.3
 Flask-CORS==4.0.1
-openai==1.54.4
+# openai 1.54.4 tenía un bug con httpx>=0.28 (pasaba `proxies=` que ya
+# no existe). 1.57.3 lo arregla. Pineamos httpx<0.28 como red de
+# seguridad por si algún transitive dep lo bajara.
+openai==1.57.3
+httpx==0.27.2
