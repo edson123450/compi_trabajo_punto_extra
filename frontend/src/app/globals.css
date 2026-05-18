@@ -68,6 +68,15 @@ body {
   stroke-width: 1.4;
   fill: none;
 }
+.rd3t-tree-container,
 .rd3t-tree-container svg {
+  width: 100%;
+  height: 100%;
   background: transparent;
+}
+/* When users drag the tree near the edges, let the SVG draw past its
+   viewBox so nodes don't get clipped mid-arc by the SVG itself.
+   The visible boundary is set by the parent wrapper instead. */
+.rd3t-tree-container svg {
+  overflow: visible;
 }
