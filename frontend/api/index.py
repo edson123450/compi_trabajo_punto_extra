@@ -164,7 +164,25 @@ def ll1_simulate():
     stack = [EOF, g.start]
     idx = 0
 
+    # Guard against left-recursive grammars: without this the loop runs
+    # forever and Vercel kills the function after 30s, returning an HTML
+    # page that the frontend cannot parse as JSON.
+    MAX_STEPS = 5000
+    iteration = 0
+
     while stack:
+        iteration += 1
+        if iteration > MAX_STEPS:
+            steps.append({
+                "stack": list(reversed(stack)), "input": inp[idx:],
+                "action": (
+                    f"ERROR: análisis abortado tras {MAX_STEPS} pasos — "
+                    "la gramática parece tener recursión izquierda y no es "
+                    "compatible con LL(1). Usa un parser LR."
+                ),
+            })
+            break
+
         top = stack[-1]
         curr = inp[idx]
         stk_snap = list(reversed(stack))

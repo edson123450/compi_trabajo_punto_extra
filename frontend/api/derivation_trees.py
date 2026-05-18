@@ -50,6 +50,12 @@ def build_topdown_tree(
     Returns (root, accepted, error_message).
     The tree is returned even on partial failure so the UI can show
     the prefix that was successfully expanded.
+
+    Includes a hard step limit to prevent infinite loops on grammars
+    with left recursion: the LL(1) table will keep returning the same
+    recursive production indefinitely, and without this guard the
+    serverless function would time out after 30s and Vercel would
+    return an HTML error page that the frontend cannot parse.
     """
     inp = tokens + [EOF]
     idx = 0
@@ -58,7 +64,22 @@ def build_topdown_tree(
     root = _node(grammar.start, 'nonterminal', children=[])
     stack: list[tuple[str, dict | None]] = [(EOF, None), (grammar.start, root)]
 
+    # Safety: bail out long before any timeout. 5000 steps is enough for
+    # arbitrarily deep but finite derivations; only left-recursive loops
+    # blow past this.
+    MAX_STEPS = 5000
+    steps = 0
+
     while stack:
+        steps += 1
+        if steps > MAX_STEPS:
+            return root, False, (
+                f"Análisis abortado tras {MAX_STEPS} pasos. Esto suele "
+                "significar que la gramática tiene recursión izquierda y "
+                "no es compatible con LL(1) / Descenso Recursivo. "
+                "Prueba con un parser LR (LR(0), SLR(1), LR(1) o LALR(1))."
+            )
+
         top_sym, top_node = stack[-1]
         curr = inp[idx] if idx < len(inp) else EOF
 

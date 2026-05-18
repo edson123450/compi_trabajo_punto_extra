@@ -79,10 +79,41 @@ export function analyzeError(errorMsg: string, parserKey: string): ErrorAnalysis
     }
   }
 
+  // Network / timeout / non-JSON response. The Safari-specific text is
+  // "The string did not match the expected pattern"; Chrome usually says
+  // "Unexpected token < in JSON" or similar. Both mean the response from
+  // the backend was not JSON, which on Vercel almost always means the
+  // serverless function timed out (>30s).
+  if (
+    /did not match the expected pattern/i.test(msg) ||
+    /unexpected token|JSON\.parse|failed to fetch|networkerror/i.test(msg)
+  ) {
+    return {
+      title: 'El backend tardó demasiado o devolvió una respuesta inválida',
+      explanation:
+        'El servidor no respondió con datos legibles. La causa más común es que el parser entró en un bucle infinito — esto pasa cuando se usa un parser LL(1) o Descenso Recursivo sobre una gramática con recursión izquierda directa (ej. E → E + T).',
+      hint:
+        'Prueba un parser ascendente (LR(0), SLR(1), LR(1) o LALR(1)) con esta misma gramática. Los parsers LR manejan recursión izquierda de forma nativa.',
+      category: 'unknown',
+    }
+  }
+
+  // Análisis abortado por step-limit (gramática left-recursive)
+  if (/análisis abortado|recursión izquierda/i.test(msg)) {
+    return {
+      title: 'Recursión izquierda detectada en parser LL',
+      explanation:
+        'La gramática tiene una producción donde el primer símbolo es el mismo no-terminal del lado izquierdo (ej. E → E + T). LL(1) y Descenso Recursivo no soportan esto: entran en bucle infinito intentando derivar.',
+      hint:
+        'Soluciones: (1) usar un parser LR — los maneja sin problema; (2) transformar la gramática eliminando la recursión izquierda. La opción de "Recomendaciones inteligentes" puede sugerirte la transformación, o usa la IA para que te dé la gramática reescrita.',
+      category: 'grammar',
+    }
+  }
+
   return {
     title: 'Error del parser',
     explanation: errorMsg,
-    hint: 'Verifica la gramática y la cadena de prueba. Asegúrate de que el backend Flask esté corriendo en localhost:5000.',
+    hint: 'Verifica que la gramática y la cadena de prueba estén bien formadas. Si crees que es un bug, mira la consola del navegador para más detalle.',
     category: 'unknown',
   }
 }
