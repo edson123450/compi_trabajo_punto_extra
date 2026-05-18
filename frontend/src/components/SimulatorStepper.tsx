@@ -68,9 +68,9 @@ export function SimulatorStepper({ steps, accepted }: Props) {
         </div>
       </div>
 
-      <div className="p-4 grid grid-cols-[auto_1fr] gap-6">
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 sm:gap-6">
         {/* Left: visual stack tower */}
-        <div className="w-28">
+        <div className="w-full sm:w-28">
           <StackVisualizer stack={step.stack} label="Pila" />
         </div>
 

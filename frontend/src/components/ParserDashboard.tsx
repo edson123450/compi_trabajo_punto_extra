@@ -179,12 +179,12 @@ export function ParserDashboard({ parserKey }: { parserKey: string }) {
   const isLR = !['ll1', 'rd'].includes(parserKey)
 
   return (
-    <div className="min-h-full dot-grid p-6">
+    <div className="min-h-full dot-grid p-4 md:p-6 pt-14 md:pt-6">
       <div className="max-w-6xl mx-auto space-y-5">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-base font-semibold text-neutral-900 tracking-tight">
               {config.label}
             </h1>

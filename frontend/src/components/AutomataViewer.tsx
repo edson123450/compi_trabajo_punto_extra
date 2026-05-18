@@ -255,7 +255,7 @@ export function AutomataViewer({ dot, currentState, title = 'Autómata LR' }: Pr
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 min-h-[320px]">
+        <div className="flex-1 min-h-[280px] sm:min-h-[360px] lg:min-h-[420px]">
           <SvgCanvas
             svg={svg}
             scale={scale}

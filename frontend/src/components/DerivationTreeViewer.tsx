@@ -383,7 +383,7 @@ export function DerivationTreeViewer({
         )}
       </div>
 
-      <div ref={wrapperRef} className="flex-1 min-h-[560px] lg:min-h-[620px] dot-grid relative overflow-hidden">
+      <div ref={wrapperRef} className="flex-1 min-h-[420px] sm:min-h-[520px] lg:min-h-[620px] dot-grid relative overflow-hidden">
         {!tree && !error && (
           <div className="absolute inset-0 flex items-center justify-center p-6">
             <div className="text-center max-w-xs">
