@@ -169,3 +169,75 @@ def build_lr_tree(
 
         else:
             return None, False, f"Unknown action entry: {entry}"
+
+
+# ─────────────────────────────────────────── AST simplification
+
+def simplify_to_ast(node: dict | None) -> dict | None:
+    """Return a simplified Abstract Syntax Tree from a parse tree.
+
+    Heuristics applied bottom-up (universal, grammar-agnostic):
+
+    1. ε nodes are dropped (do not appear in the AST).
+    2. Single-child non-terminals are collapsed — the non-terminal
+       is replaced by its only meaningful child. This kills the
+       chains like  E → T → F → id  that come from operator-precedence
+       grammars, leaving just  id.
+    3. Binary-operator pattern detection: a non-terminal with exactly
+       three children where the middle child is a terminal is promoted
+       to that terminal as the root, with the outer children as
+       operands. This turns  E → E + T  into  + [E, T]  — a real
+       expression tree.
+    4. Anything else keeps its non-terminal label but with the filtered
+       children.
+
+    The function is purely structural — no semantic information about
+    the source grammar is used. That keeps it general enough to handle
+    LL- and LR-style grammars without bespoke rules.
+    """
+    if node is None:
+        return None
+
+    kind = (node.get('attributes') or {}).get('type', '')
+    name = node.get('name', '')
+
+    # Rule 1: epsilon disappears
+    if kind == 'epsilon':
+        return None
+
+    # Terminals are leaves of the AST
+    if kind == 'terminal':
+        return {
+            'name': name,
+            'attributes': {'type': 'terminal'},
+        }
+
+    # Non-terminal: recurse, drop None children
+    children = [simplify_to_ast(c) for c in node.get('children', [])]
+    children = [c for c in children if c is not None]
+
+    if not children:
+        return None
+
+    # Rule 2: collapse single-child non-terminals
+    if len(children) == 1:
+        return children[0]
+
+    # Rule 3: binary-operator pattern  [left, op, right]
+    if (
+        len(children) == 3
+        and children[1].get('attributes', {}).get('type') == 'terminal'
+    ):
+        op = children[1]['name']
+        return {
+            'name': op,
+            'attributes': {'type': 'operator', 'origin': name},
+            'children': [children[0], children[2]],
+        }
+
+    # Rule 4: keep as non-terminal with filtered children
+    return {
+        'name': name,
+        'attributes': {'type': 'nonterminal'},
+        'children': children,
+    }

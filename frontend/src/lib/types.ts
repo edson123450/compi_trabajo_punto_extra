@@ -76,8 +76,9 @@ export interface DotData {
 export interface DerivationNodeData {
   name: string
   attributes?: {
-    type?: 'nonterminal' | 'terminal' | 'epsilon'
+    type?: 'nonterminal' | 'terminal' | 'epsilon' | 'operator'
     production?: string
+    origin?: string
   }
   children?: DerivationNodeData[]
 }
@@ -85,6 +86,7 @@ export interface DerivationNodeData {
 export interface TreeData {
   ok: true
   tree: DerivationNodeData | null
+  ast: DerivationNodeData | null
   accepted: boolean
   error?: string
 }

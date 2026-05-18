@@ -288,13 +288,14 @@ export function ParserDashboard({ parserKey }: { parserKey: string }) {
               />
             )}
 
-            {/* Derivation tree (LL / RD / LR family) */}
+            {/* Derivation tree + AST (LL / RD / LR family) */}
             {result.derivationTree && (
               <DerivationTreeViewer
                 tree={result.derivationTree.tree}
+                ast={result.derivationTree.ast}
                 accepted={result.derivationTree.accepted}
                 error={result.derivationTree.error}
-                title={`Árbol de derivación · ${config.label}`}
+                title={`Árbol · ${config.label}`}
               />
             )}
           </div>

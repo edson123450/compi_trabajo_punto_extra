@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import {
   Network, Loader2, ZoomIn, ZoomOut, Maximize2, X, Minimize2,
-  CheckCircle2, XCircle, Info,
+  CheckCircle2, XCircle, Info, GitBranch, Sigma,
 } from 'lucide-react'
 
 // react-d3-tree depends on the DOM (d3, ResizeObserver), so we lazy-load
@@ -27,14 +27,18 @@ const Tree = dynamic(() => import('react-d3-tree').then(m => m.default), {
 export interface DerivationNode {
   name: string
   attributes?: {
-    type?: 'nonterminal' | 'terminal' | 'epsilon'
+    type?: 'nonterminal' | 'terminal' | 'epsilon' | 'operator'
     production?: string
+    origin?: string
   }
   children?: DerivationNode[]
 }
 
+type ViewMode = 'parse' | 'ast'
+
 interface Props {
   tree:     DerivationNode | null
+  ast:      DerivationNode | null
   accepted: boolean
   error?:   string
   title?:   string
@@ -46,31 +50,35 @@ const NODE_FILL: Record<string, string> = {
   nonterminal: '#dbeafe',   // blue-100
   terminal:    '#fef3c7',   // amber-100
   epsilon:     '#f3e8ff',   // violet-100
+  operator:    '#d1fae5',   // emerald-100
 }
 const NODE_STROKE: Record<string, string> = {
   nonterminal: '#3b82f6',   // blue-500
   terminal:    '#d97706',   // amber-600
   epsilon:     '#a855f7',   // violet-500
+  operator:    '#10b981',   // emerald-500
 }
 const NODE_TEXT: Record<string, string> = {
   nonterminal: '#1e40af',
   terminal:    '#92400e',
   epsilon:     '#6b21a8',
+  operator:    '#065f46',
 }
 
 function renderCustomNode({ nodeDatum }: any) {
   const kind     = nodeDatum.attributes?.type ?? 'nonterminal'
   const isEps    = kind === 'epsilon'
   const isTerm   = kind === 'terminal'
+  const isOp     = kind === 'operator'
   const isLeaf   = !nodeDatum.children || nodeDatum.children.length === 0
 
   // Geometry adapts to label width
   const label    = isEps ? 'ε' : nodeDatum.name
-  const padding  = 14
+  const padding  = isOp ? 16 : 14
   const charW    = 7
-  const width    = Math.max(36, label.length * charW + padding * 2)
-  const height   = 30
-  const rx       = isTerm || isEps ? 14 : 6
+  const width    = Math.max(isOp ? 42 : 36, label.length * charW + padding * 2)
+  const height   = isOp ? 34 : 30
+  const rx       = isTerm || isEps ? 14 : isOp ? 17 : 6
 
   return (
     <g>
@@ -90,8 +98,8 @@ function renderCustomNode({ nodeDatum }: any) {
         dy="0.32em"
         style={{
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-          fontSize: '12px',
-          fontWeight: isLeaf ? 600 : 500,
+          fontSize: isOp ? '13px' : '12px',
+          fontWeight: isOp ? 700 : (isLeaf ? 600 : 500),
           fill: NODE_TEXT[kind],
           stroke: 'none',
         }}
@@ -186,19 +194,68 @@ function ZoomBar({
 
 // ─────────────────────────────────────────── modal (fullscreen)
 
+// ─────────────────────────────────────────── view toggle
+
+function ViewToggle({
+  mode, setMode, hasAst,
+}: { mode: ViewMode; setMode: (m: ViewMode) => void; hasAst: boolean }) {
+  return (
+    <div className="inline-flex items-center rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
+      <button
+        onClick={() => setMode('parse')}
+        className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all duration-150 ${
+          mode === 'parse'
+            ? 'bg-white text-blue-700 shadow-sm'
+            : 'text-neutral-400 hover:text-neutral-600'
+        }`}
+        title="Árbol de derivación fiel a la gramática"
+      >
+        <GitBranch className="h-3 w-3" />
+        Parse Tree
+      </button>
+      <button
+        onClick={() => setMode('ast')}
+        disabled={!hasAst}
+        className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition-all duration-150 ${
+          mode === 'ast'
+            ? 'bg-white text-emerald-700 shadow-sm'
+            : 'text-neutral-400 hover:text-neutral-600 disabled:opacity-40 disabled:cursor-not-allowed'
+        }`}
+        title="Árbol semántico simplificado (sin nodos auxiliares ni ε)"
+      >
+        <Sigma className="h-3 w-3" />
+        AST
+      </button>
+    </div>
+  )
+}
+
+
+// ─────────────────────────────────────────── modal (fullscreen)
+
 function TreeModal({
-  tree, accepted, title, onClose,
-}: { tree: DerivationNode; accepted: boolean; title: string; onClose: () => void }) {
+  tree, ast, accepted, title, initialMode, onClose,
+}: {
+  tree: DerivationNode | null
+  ast: DerivationNode | null
+  accepted: boolean
+  title: string
+  initialMode: ViewMode
+  onClose: () => void
+}) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom]           = useState(1)
   const [translate, setTranslate] = useState({ x: 400, y: 60 })
+  const [mode, setMode]           = useState<ViewMode>(initialMode)
+
+  const displayTree = mode === 'ast' ? ast : tree
 
   // Recenter on mount based on wrapper size
   useEffect(() => {
     if (!wrapperRef.current) return
     const w = wrapperRef.current.clientWidth
     setTranslate({ x: w / 2, y: 60 })
-  }, [])
+  }, [mode])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -234,6 +291,7 @@ function TreeModal({
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <ViewToggle mode={mode} setMode={setMode} hasAst={!!ast} />
             <ZoomBar zoom={zoom} setZoom={setZoom} />
             <button
               onClick={onClose}
@@ -246,7 +304,9 @@ function TreeModal({
         </div>
 
         <div ref={wrapperRef} className="flex-1 dot-grid">
-          <TreeCanvas tree={tree} zoom={zoom} translate={translate} onTranslate={setTranslate} />
+          {displayTree && (
+            <TreeCanvas tree={displayTree} zoom={zoom} translate={translate} onTranslate={setTranslate} />
+          )}
         </div>
 
         <div className="px-5 py-2 border-t border-neutral-100 bg-neutral-50/80 flex-shrink-0 flex items-center justify-between">
@@ -263,14 +323,18 @@ function TreeModal({
 // ─────────────────────────────────────────── main component
 
 export function DerivationTreeViewer({
-  tree, accepted, error, title = 'Árbol de derivación',
+  tree, ast, accepted, error, title = 'Árbol de derivación',
 }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom]           = useState(0.85)
   const [translate, setTranslate] = useState({ x: 240, y: 40 })
   const [modal, setModal]         = useState(false)
+  const [mode, setMode]           = useState<ViewMode>('parse')
 
-  // Recenter on mount/resize
+  const displayTree = mode === 'ast' ? ast : tree
+  const hasAst      = !!ast
+
+  // Recenter on mount/resize/mode-change
   useEffect(() => {
     if (!wrapperRef.current) return
     const apply = () => {
@@ -281,16 +345,16 @@ export function DerivationTreeViewer({
     const ro = new ResizeObserver(apply)
     ro.observe(wrapperRef.current)
     return () => ro.disconnect()
-  }, [])
+  }, [mode])
 
-  const stats = tree
-    ? { nodes: countNodes(tree), depth: treeDepth(tree) }
+  const stats = displayTree
+    ? { nodes: countNodes(displayTree), depth: treeDepth(displayTree) }
     : null
 
   return (
     <div className="lab-card overflow-hidden flex flex-col">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-100">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-neutral-100">
+        <div className="flex items-center gap-2 flex-wrap">
           <Network className="h-3.5 w-3.5 text-neutral-400" />
           <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
             {title}
@@ -311,7 +375,12 @@ export function DerivationTreeViewer({
             </span>
           )}
         </div>
-        {tree && <ZoomBar zoom={zoom} setZoom={setZoom} onMaximize={() => setModal(true)} />}
+        {tree && (
+          <div className="flex items-center gap-2">
+            <ViewToggle mode={mode} setMode={setMode} hasAst={hasAst} />
+            <ZoomBar zoom={zoom} setZoom={setZoom} onMaximize={() => setModal(true)} />
+          </div>
+        )}
       </div>
 
       <div ref={wrapperRef} className="flex-1 min-h-[360px] dot-grid relative">
@@ -334,34 +403,55 @@ export function DerivationTreeViewer({
             </div>
           </div>
         )}
-        {tree && (
-          <TreeCanvas tree={tree} zoom={zoom} translate={translate} onTranslate={setTranslate} />
+        {displayTree && (
+          <TreeCanvas tree={displayTree} zoom={zoom} translate={translate} onTranslate={setTranslate} />
         )}
       </div>
 
       {tree && (
         <div className="px-4 py-2 border-t border-neutral-100 bg-neutral-50/60 flex items-center gap-3">
           <Info className="h-3 w-3 text-neutral-400 flex-shrink-0" />
-          <p className="text-[10px] text-neutral-500 leading-snug">
-            <span className="inline-flex items-center gap-1 mr-2">
-              <span className="inline-block h-2 w-2 rounded-sm bg-blue-100 border border-blue-400" />
-              no-terminal
-            </span>
-            <span className="inline-flex items-center gap-1 mr-2">
-              <span className="inline-block h-2 w-2 rounded-full bg-amber-100 border border-amber-500" />
-              terminal
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-violet-100 border border-violet-500" />
-              ε
-            </span>
-            <span className="ml-auto text-neutral-400">· click en un nodo para colapsar</span>
+          <p className="text-[10px] text-neutral-500 leading-snug flex-1">
+            {mode === 'parse' ? (
+              <>
+                <span className="inline-flex items-center gap-1 mr-2">
+                  <span className="inline-block h-2 w-2 rounded-sm bg-blue-100 border border-blue-400" />
+                  no-terminal
+                </span>
+                <span className="inline-flex items-center gap-1 mr-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-100 border border-amber-500" />
+                  terminal
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="inline-block h-2 w-2 rounded-full bg-violet-100 border border-violet-500" />
+                  ε
+                </span>
+                <span className="ml-2 text-neutral-400">— fiel a la gramática</span>
+              </>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1 mr-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-100 border border-emerald-500" />
+                  operador
+                </span>
+                <span className="inline-flex items-center gap-1 mr-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-100 border border-amber-500" />
+                  operando
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="inline-block h-2 w-2 rounded-sm bg-blue-100 border border-blue-400" />
+                  no-terminal
+                </span>
+                <span className="ml-2 text-neutral-400">— sin ε ni unarios</span>
+              </>
+            )}
           </p>
         </div>
       )}
 
       {modal && tree && (
-        <TreeModal tree={tree} accepted={accepted} title={title} onClose={() => setModal(false)} />
+        <TreeModal tree={tree} ast={ast} accepted={accepted} title={title}
+          initialMode={mode} onClose={() => setModal(false)} />
       )}
     </div>
   )
