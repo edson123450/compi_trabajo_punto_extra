@@ -33,4 +33,18 @@ export const api = {
   lalr1Simulate: (grammar: string, tokens: string[]) => post<any>('/lalr1/simulate', { grammar, tokens }),
   lalr1Tree:     (grammar: string, tokens: string[]) => post<any>('/lalr1/tree',     { grammar, tokens }),
   lalr1Dot:      (grammar: string)                   => post<any>('/lalr1/dot',      { grammar }),
+
+  // ─── LLM-powered assistant ───
+  aiExplainError: (params: {
+    grammar:       string
+    tokens:        string[]
+    parser_label:  string
+    error_message: string
+  }) => post<any>('/ai/explain-error', params),
+
+  aiRecommend: (params: {
+    grammar:      string
+    conflicts:    string[]
+    parser_label: string
+  }) => post<any>('/ai/recommend', params),
 }

@@ -31,6 +31,7 @@ from api.slr1_parser import build_slr1_tables
 from api.lr1_parser import build_lr1_tables
 from api.lalr1_parser import build_lalr1_tables
 from api.derivation_trees import build_topdown_tree, build_lr_tree, simplify_to_ast
+from api.ai_assistant import explain_error as ai_explain_error, recommend as ai_recommend
 
 # ── app setup ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -413,6 +414,50 @@ def lalr1_tree():
     action, goto, _ = build_lalr1_tables(g)
     tree, accepted, error_msg = build_lr_tree(action, goto, tokens)
     return _tree_response(tree, accepted, error_msg)
+
+
+# ── AI assistant (OpenAI) ─────────────────────────────────────────────────────
+
+@app.route("/api/ai/explain-error", methods=["POST"])
+def ai_explain_error_endpoint():
+    """Natural-language explanation of a parser error, via OpenAI."""
+    data = request.get_json(silent=True) or {}
+    grammar       = data.get("grammar", "")
+    tokens        = data.get("tokens", [])
+    parser_label  = data.get("parser_label", "Parser")
+    error_message = data.get("error_message", "")
+
+    if not grammar or not error_message:
+        return _err("Missing 'grammar' or 'error_message'")
+
+    result = ai_explain_error(
+        parser_label=parser_label,
+        grammar=grammar,
+        tokens=tokens,
+        error_message=error_message,
+    )
+    status = 200 if result.get("ok") else 502
+    return jsonify(result), status
+
+
+@app.route("/api/ai/recommend", methods=["POST"])
+def ai_recommend_endpoint():
+    """Concrete grammar-transformation suggestions, via OpenAI."""
+    data = request.get_json(silent=True) or {}
+    grammar      = data.get("grammar", "")
+    conflicts    = data.get("conflicts", [])
+    parser_label = data.get("parser_label", "Parser")
+
+    if not grammar:
+        return _err("Missing 'grammar'")
+
+    result = ai_recommend(
+        parser_label=parser_label,
+        grammar=grammar,
+        conflicts=conflicts,
+    )
+    status = 200 if result.get("ok") else 502
+    return jsonify(result), status
 
 
 # ── DOT / Automaton visualization ─────────────────────────────────────────────

@@ -236,7 +236,14 @@ export function ParserDashboard({ parserKey }: { parserKey: string }) {
 
         {/* ── Error assistant ── */}
         {error && (
-          <ErrorAssistant error={error} parserKey={parserKey} onDismiss={() => setError(null)} />
+          <ErrorAssistant
+            error={error}
+            parserKey={parserKey}
+            parserLabel={config.label}
+            grammar={grammar}
+            tokens={tokenStr.trim().split(/\s+/).filter(Boolean)}
+            onDismiss={() => setError(null)}
+          />
         )}
 
         {/* ── Comparative analysis + smart recommendations ── */}
